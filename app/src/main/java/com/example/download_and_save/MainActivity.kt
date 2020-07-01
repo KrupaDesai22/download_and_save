@@ -26,8 +26,6 @@ class MainActivity : AppCompatActivity() {
 
     lateinit var button: Button
 
-    lateinit var webView: WebView
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -35,21 +33,11 @@ class MainActivity : AppCompatActivity() {
         button.setOnClickListener(View.OnClickListener {
             showFile()
         })
-
-
-//        webView = findViewById(R.id.webView)
-//
-        downloadZipFile()
-//        webView.settings.allowFileAccess=true
-//        webView.settings.allowContentAccess=true
-//        webView.settings.allowFileAccessFromFileURLs=true
-//        webView.settings.allowUniversalAccessFromFileURLs=true
-//
-//        val file =
-//            File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files/dummy.pdf")
-//
-//        val uri = Uri.fromFile(file)
-//        webView.loadUrl(uri.toString())
+        val fileList = listOf<String>(
+            "https://en.unesco.org/inclusivepolicylab/sites/default/files/dummy-pdf_2.pdf",
+            "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        )
+        downloadZipFile(fileList)
     }
 
     private fun showFile(){
@@ -70,39 +58,44 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    private fun downloadZipFile() {
+    private fun downloadZipFile(fileList: List<String>) {
         val httpClient = OkHttpClient.Builder()
         val builder = Retrofit.Builder().baseUrl("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/")
         val retrofit = builder.client(httpClient.build()).build()
         val downloadService: FileDownloadClient =
             retrofit.create<FileDownloadClient>(FileDownloadClient::class.java)
-        val call: Call<ResponseBody?>? =
-            downloadService.downloadFile()
-        if (call != null) {
-            call.enqueue(object : Callback<ResponseBody?> {
-                override fun onResponse(
-                    call: Call<ResponseBody?>?,
-                    response: Response<ResponseBody?>
-                ) {
-                    if (response.isSuccessful()) {
-                        Log.d("FragmentActivity.TAG", "Got the body for the file")
-                        object : AsyncTask<Void?, Long?, Void?>() {
-                            override fun doInBackground(vararg params: Void?): Void? {
-                                response.body()?.let { saveToDisk(it) }
-                                return null
-                            }
-                        }.execute()
+        fileList.forEach {
+            val call: Call<ResponseBody?>? =
+                downloadService.downloadFile(it)
+            if (call != null) {
+                call.enqueue(object : Callback<ResponseBody?> {
+                    override fun onResponse(
+                        call: Call<ResponseBody?>?,
+                        response: Response<ResponseBody?>
+                    ) {
+                        if (response.isSuccessful()) {
+                            Log.d("FragmentActivity.TAG", "Got the body for the file")
+                            object : AsyncTask<Void?, Long?, Void?>() {
+                                override fun doInBackground(vararg params: Void?): Void? {
+                                    response.body()?.let { saveToDisk(it) }
+                                    return null
+                                }
+                            }.execute()
 
-                    } else {
-                        Log.d("FragmentActivity.TAG", "Connection failed " + response.errorBody())
+                        } else {
+                            Log.d(
+                                "FragmentActivity.TAG",
+                                "Connection failed " + response.errorBody()
+                            )
+                        }
                     }
-                }
 
-                override fun onFailure(call: Call<ResponseBody?>?, t: Throwable) {
-                    t.printStackTrace()
-                    Log.e("FragmentActivity.TAG", t.message)
-                }
-            })
+                    override fun onFailure(call: Call<ResponseBody?>?, t: Throwable) {
+                        t.printStackTrace()
+                        Log.e("FragmentActivity.TAG", t.message)
+                    }
+                })
+            }
         }
     }
 
