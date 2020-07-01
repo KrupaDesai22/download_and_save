@@ -19,15 +19,13 @@ import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import java.io.*
-import java.net.URI
-import java.nio.file.Paths
 
 
 class MainActivity : AppCompatActivity() {
 
-    lateinit var button: Button
-    var basePath =
-        this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files"
+    private lateinit var button: Button
+//    private val basePath =
+//        this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,12 +34,27 @@ class MainActivity : AppCompatActivity() {
         button.setOnClickListener(View.OnClickListener {
             showFile()
         })
+
+        val basePath =
+            this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files"
+
         val fileList = listOf<String>(
             "https://en.unesco.org/inclusivepolicylab/sites/default/files/dummy-pdf_2.pdf",
             "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
         )
-        downloadZipFile(fileList)
+        downloadFileIfNotExists(fileList,basePath)
+
+
     }
+
+    private fun downloadFileIfNotExists(fileList: List<String>,basePath:String) {
+        fileList.forEach {
+            val file = File(basePath + "/" + getFileName(it))
+            if (!file.exists())
+                downloadFiles(fileList)
+        }
+    }
+
 
     private fun showFile(){
         val file = File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files/dummy.pdf")
@@ -61,12 +74,11 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    private fun downloadZipFile(fileList: List<String>) {
+    private fun downloadFiles(fileList: List<String>) {
         val httpClient = OkHttpClient.Builder()
         val builder = Retrofit.Builder().baseUrl("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/")
         val retrofit = builder.client(httpClient.build()).build()
-        val downloadService: FileDownloadClient =
-            retrofit.create<FileDownloadClient>(FileDownloadClient::class.java)
+        val downloadService: FileDownloadClient = retrofit.create(FileDownloadClient::class.java)
         fileList.forEach {
             val call: Call<ResponseBody?>? =
                 downloadService.downloadFile(it)
@@ -77,8 +89,7 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     if (response.isSuccessful) {
                         Log.d("FragmentActivity.TAG", "Got the body for the file")
-                        val fileName: String =
-                            it.substring(it.lastIndexOf('/') + 1, it.length)
+                        val fileName = getFileName(it)
                         object : AsyncTask<Void?, Long?, Void?>() {
                             override fun doInBackground(vararg params: Void?): Void? {
                                 response.body()?.let { saveToDisk(it, fileName) }
@@ -102,7 +113,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun getFileName(it: String): String {
+        return it.substring(it.lastIndexOf('/') + 1, it.length)
+    }
+
     fun saveToDisk(body: ResponseBody, filename: String) {
+        val basePath =
+            this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files"
+
         try {
 
             val directory = File(basePath)
