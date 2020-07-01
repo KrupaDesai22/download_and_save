@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.os.Environment
 import android.util.Log
 import android.view.View
-import android.webkit.WebView
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
@@ -20,11 +19,15 @@ import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import java.io.*
+import java.net.URI
+import java.nio.file.Paths
 
 
 class MainActivity : AppCompatActivity() {
 
     lateinit var button: Button
+    var basePath =
+        this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,43 +70,47 @@ class MainActivity : AppCompatActivity() {
         fileList.forEach {
             val call: Call<ResponseBody?>? =
                 downloadService.downloadFile(it)
-            if (call != null) {
-                call.enqueue(object : Callback<ResponseBody?> {
-                    override fun onResponse(
-                        call: Call<ResponseBody?>?,
-                        response: Response<ResponseBody?>
-                    ) {
-                        if (response.isSuccessful()) {
-                            Log.d("FragmentActivity.TAG", "Got the body for the file")
-                            object : AsyncTask<Void?, Long?, Void?>() {
-                                override fun doInBackground(vararg params: Void?): Void? {
-                                    response.body()?.let { saveToDisk(it) }
-                                    return null
-                                }
-                            }.execute()
+            call?.enqueue(object : Callback<ResponseBody?> {
+                override fun onResponse(
+                    call: Call<ResponseBody?>?,
+                    response: Response<ResponseBody?>
+                ) {
+                    if (response.isSuccessful) {
+                        Log.d("FragmentActivity.TAG", "Got the body for the file")
+                        val fileName: String =
+                            it.substring(it.lastIndexOf('/') + 1, it.length)
+                        object : AsyncTask<Void?, Long?, Void?>() {
+                            override fun doInBackground(vararg params: Void?): Void? {
+                                response.body()?.let { saveToDisk(it, fileName) }
+                                return null
+                            }
+                        }.execute()
 
-                        } else {
-                            Log.d(
-                                "FragmentActivity.TAG",
-                                "Connection failed " + response.errorBody()
-                            )
-                        }
+                    } else {
+                        Log.d(
+                            "FragmentActivity.TAG",
+                            "Connection failed " + response.errorBody()
+                        )
                     }
+                }
 
-                    override fun onFailure(call: Call<ResponseBody?>?, t: Throwable) {
-                        t.printStackTrace()
-                        Log.e("FragmentActivity.TAG", t.message)
-                    }
-                })
-            }
+                override fun onFailure(call: Call<ResponseBody?>?, t: Throwable) {
+                    t.printStackTrace()
+                    Log.e("FragmentActivity.TAG", t.message)
+                }
+            })
         }
     }
 
-    fun saveToDisk(body: ResponseBody) {
+    fun saveToDisk(body: ResponseBody, filename: String) {
         try {
-            File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files").mkdir()
+
+            val directory = File(basePath)
+            if (! directory.exists()){
+                directory.mkdir();
+            }
             val destinationFile =
-                File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files/dummy.pdf")
+                File(basePath + "/" + filename)
             var `is`: InputStream? = null
             var os: OutputStream? = null
             try {
