@@ -1,5 +1,6 @@
 package com.example.download_and_save.presenter
 
+import com.example.download_and_save.service.EncryptDecrypt
 import com.example.download_and_save.service.FileIOService
 import com.example.download_and_save.service.FileStatusObserver
 import com.example.download_and_save.util.NetworkManager
@@ -7,7 +8,7 @@ import com.example.download_and_save.util.ResultObserver
 import java.io.File
 import java.io.InputStream
 
-class MainPresenter(val network: NetworkManager, val fileService: FileIOService): ResultObserver, FileStatusObserver {
+class MainPresenter(val network: NetworkManager, val fileService: FileIOService, val encryptDecrypt: EncryptDecrypt): ResultObserver, FileStatusObserver {
 
     init {
         network.resultObserver = this
@@ -33,9 +34,7 @@ class MainPresenter(val network: NetworkManager, val fileService: FileIOService)
     }
 
     override fun downloadCompleteWithResponse(istream: InputStream, fileName: String) {
-        fileService.saveToDisk(
-            istream, fileName
-        )
+        encryptDecrypt.encryptFile(istream.readBytes(),"${fileService.basePath}/$fileName")
     }
 
     override fun downloadFailedWithError(error: String) {

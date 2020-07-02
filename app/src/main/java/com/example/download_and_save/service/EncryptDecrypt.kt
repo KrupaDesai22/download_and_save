@@ -1,73 +1,49 @@
 package com.example.download_and_save.service
 
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.io.IOException
-import java.security.InvalidKeyException
-import java.security.NoSuchAlgorithmException
-import java.security.SecureRandom
+import android.content.SharedPreferences
+import android.util.Log
 import javax.crypto.*
-import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
 
-class EncryptDecrypt{
-    private lateinit var encryptionIv : ByteArray
-    private var TRANSFORMATION : String = "AES/GCM/NoPadding"
-
-    private fun generateKeyStore(alias : String): SecretKey {
-        val ANDROID_KEY_STORE = "AndroidKeyStore"
-        val keyGenerator: KeyGenerator = KeyGenerator
-            .getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEY_STORE)
-        val keyGenParameterSpec = KeyGenParameterSpec.Builder(
-            alias,
-            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-        )
-            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-            .build()
-
-        keyGenerator.init(keyGenParameterSpec);
-        val secretKey: SecretKey = keyGenerator.generateKey()
-        return secretKey
+class EncryptDecrypt(private val pref: SharedPreferences, private val fileService: FileIOService, private val secretkeyGenerator: SecretkeyGenerator){
+    @Throws(Exception::class)
+    fun encrypt(yourKey: SecretKey, fileData: ByteArray): ByteArray {
+        val data = yourKey.getEncoded()
+        val skeySpec = SecretKeySpec(data, 0, data.size, "AES")
+        val cipher = Cipher.getInstance("AES", "BC")
+        cipher.init(Cipher.ENCRYPT_MODE, skeySpec, IvParameterSpec(ByteArray(cipher.getBlockSize())))
+        return cipher.doFinal(fileData)
     }
 
-    private fun getIV(): IvParameterSpec {
-        val ivRandom = SecureRandom() //not caching previous seeded instance of SecureRandom
-        // 1
-        val iv = ByteArray(16)
-        ivRandom.nextBytes(iv)
-        return IvParameterSpec(iv)
-    }
+    fun encryptFile(fileData: ByteArray, filePath: String) {
+        try {
+            //get secret key
+            val secretKey = secretkeyGenerator.getSecretKey(pref)
+            //encrypt file
+            val encodedData = encrypt(secretKey, fileData)
 
-    @Throws(
-        IOException::class,
-        NoSuchAlgorithmException::class,
-        NoSuchPaddingException::class,
-        InvalidKeyException::class
-    )
-    fun decryptAES(
-        Encrypt_FilePath: String?,
-        Decrypt_FilePath: String?
-    ) {
-        val fis = FileInputStream(Encrypt_FilePath)
-        val fos = FileOutputStream(Decrypt_FilePath)
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        // val spec = GCMParameterSpec(128, encryptionIv)
-        val spec = GCMParameterSpec(128, encryptionIv)
-        cipher.init(Cipher.DECRYPT_MODE, generateKeyStore("PUBLIC_KEY"), spec)
-        val cis = CipherInputStream(fis, cipher)
-        var b: Int
-        val data = ByteArray(2048)
-        while (cis.read(data).also { b = it } != -1) {
-            val decrypted: ByteArray =  cipher.update(data)
-            fos.write(decrypted, 0, b)
+            fileService.saveFile(encodedData, filePath)
+
+        } catch (e: Exception) {
+            Log.d("mTag", e.message)
         }
-        fos.flush()
-        fos.close()
-        cis.close()
     }
 
+    @Throws(Exception::class)
+    fun decrypt(yourKey: SecretKey, fileData: ByteArray): ByteArray {
+        val decrypted: ByteArray
+        val cipher = Cipher.getInstance("AES", "BC")
+        cipher.init(Cipher.DECRYPT_MODE, yourKey, IvParameterSpec(ByteArray(cipher.blockSize)))
+        decrypted = cipher.doFinal(fileData)
+        return decrypted
+    }
+  
+    fun decryptEncryptedFile(filePath: String): ByteArray {
+        val filePath = filePath
+        val fileData = fileService.readFile(filePath)
+        val secretKey = secretkeyGenerator.getSecretKey(pref)
+        return decrypt(secretKey, fileData)
+    }
 
 }
