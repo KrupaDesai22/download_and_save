@@ -1,8 +1,9 @@
-package com.example.download_and_save
+package com.example.download_and_save.activity
 
 import android.os.Bundle
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
+import com.example.download_and_save.R
 import kotlinx.android.synthetic.main.activity_web_view.*
 
 class WebViewActivity : AppCompatActivity(){
