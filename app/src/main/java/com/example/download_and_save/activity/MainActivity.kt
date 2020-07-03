@@ -1,14 +1,11 @@
 package com.example.download_and_save.activity
 
-import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
-import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.util.Log
 import android.view.View
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
@@ -16,16 +13,10 @@ import androidx.core.content.FileProvider
 import com.example.download_and_save.R
 import com.example.download_and_save.presenter.MainPresenter
 import com.example.download_and_save.service.EncryptDecrypt
-import com.example.download_and_save.service.FileDownloadClient
 import com.example.download_and_save.service.FileIOService
+import com.example.download_and_save.service.SecretkeyGenerator
 import com.example.download_and_save.util.NetworkManager
-import okhttp3.OkHttpClient
-import okhttp3.ResponseBody
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import retrofit2.Retrofit
-import java.io.*
+import java.io.File
 
 
 class MainActivity : AppCompatActivity() {
@@ -47,7 +38,7 @@ class MainActivity : AppCompatActivity() {
         val basePath = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files"
         sharedPreferences = this.getSharedPreferences("DOWNLOAD", 0)
         fileIOService = FileIOService(basePath)
-        encryptDecrypt= EncryptDecrypt(sharedPreferences,fileIOService)
+        encryptDecrypt= EncryptDecrypt(sharedPreferences,fileIOService, SecretkeyGenerator())
 
         presenter = MainPresenter(NetworkManager(), FileIOService(basePath),encryptDecrypt)
 
@@ -60,7 +51,8 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun showFile(){
-       val decryptData= encryptDecrypt.decryptEncryptedFile(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files/dummy.pdf")
+        val fPath = this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files/dummy.pdf"
+        val decryptData = encryptDecrypt.decryptFromKeyStore("attachment", fPath)
         fileIOService.saveFileDecryptFile(decryptData,this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files/dummy_decrypt.pdf")
         val file = File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files/dummy_decrypt.pdf")
         val intent = Intent(Intent.ACTION_VIEW)

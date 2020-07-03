@@ -34,7 +34,8 @@ class MainPresenter(val network: NetworkManager, val fileService: FileIOService,
     }
 
     override fun downloadCompleteWithResponse(istream: InputStream, fileName: String) {
-        encryptDecrypt.encryptFile(istream.readBytes(),"${fileService.basePath}/$fileName")
+        //encryptDecrypt.encryptFile(istream.readBytes(),"${fileService.basePath}/$fileName")
+        encryptDecrypt.encryptInKeyStore("attachment", istream.readBytes(), "${fileService.basePath}/$fileName")
     }
 
     override fun downloadFailedWithError(error: String) {
