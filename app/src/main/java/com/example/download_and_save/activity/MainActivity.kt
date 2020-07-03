@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private fun showFile(){
         val fPath = this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files/dummy.pdf"
         val decryptData = encryptDecrypt.decryptFromKeyStore("attachment", fPath)
+
         fileIOService.saveFileDecryptFile(decryptData,this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files/dummy_decrypt.pdf")
         val file = File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath + "/" + "files/dummy_decrypt.pdf")
         val intent = Intent(Intent.ACTION_VIEW)
